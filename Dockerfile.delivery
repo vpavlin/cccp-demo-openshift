@@ -1,0 +1,7 @@
+FROM centos
+
+RUN yum -y install centos
+
+ADD run-delivery.sh /usr/bin/
+
+RUN run-delivery.sh

@@ -1,0 +1,204 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "cccp-demo",
+    "annotations": {
+      "description": "Container Pipeline PoC Template"
+    }
+  },
+  "parameters": [
+    {
+      "name": "SOURCE_REPOSITORY_URL",
+      "description": "The URL of the repository with your application source code",
+      "value": "",
+      "required": true
+    },
+    {
+      "name": "BUILD_TRIGGER_SECRET",
+      "description": "A secret to be used to trigger a build via Origin API",
+      "value": "secret101"
+    },
+	{
+      "name": "TARGET_REGISTRY",
+      "description": "An URL of a registry where to push the final image",
+      "value": "172.30.201.54:5000"
+    },
+    {
+      "name": "TAG",
+      "description": "Tag for the resulting image",
+      "value": "cccp-demo",
+      "required": true
+    },
+    {
+      "name": "REPO_PATH",
+      "description": "Buildroot path in a repository",
+      "value": "/",
+      "required": true
+    }
+
+  ],
+  "objects": [
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+          "name": "cccp-build" 
+      },
+      "spec": {
+        "triggers": [ 
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "${BUILD_TRIGGER_SECRET}"
+            }
+          }
+        ],
+        "source": { 
+          "type": "Git",
+          "git": {
+            "uri": "${SOURCE_REPOSITORY_URL}"
+          }
+        },
+        "strategy": { 
+          "type": "Custom",
+          "customStrategy": {
+            "exposeDockerSocket": true,
+            "from": {
+              "kind": "DockerImage",
+              "name": "cccp-build"
+            },
+            "env": [
+              {
+                "name": "TAG",
+                "value": "${TAG}:test"
+              },
+              {
+                "name": "SOURCE_REPOSITORY_URL",
+                "value": "${SOURCE_REPOSITORY_URL}"
+              },
+              {
+                "name": "REPO_PATH",
+                "value": "${REPO_PATH}"
+              }
+            ]
+          }
+        },
+        "output": { 
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "${TAG}:test"
+          }
+        }
+      }
+    },
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+          "name": "cccp-test" 
+      },
+      "spec": {
+        "triggers": [ 
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "${BUILD_TRIGGER_SECRET}"
+            }
+          },
+          {
+            "type": "ImageChange",
+            "imageChange": {
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "${TAG}:test"
+              }
+            }
+          }
+        ],
+        "strategy": { 
+          "type": "Custom",
+          "customStrategy": {
+            "exposeDockerSocket": true,
+            "from": {
+              "kind": "DockerImage",
+              "name": "cccp-test"
+            },
+            "env": [
+              {
+                "name": "FROM",
+                "value": "${TAG}:test"
+              },
+              {
+                "name": "TO",
+                "value": "${TAG}:rc"
+              }
+            ]
+          }
+        },
+        "output": { 
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "${TAG}:rc"
+          }
+        }
+      }
+    },
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+          "name": "cccp-delivery" 
+      },
+      "spec": {
+        "triggers": [ 
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "${BUILD_TRIGGER_SECRET}"
+            }
+          },
+          {
+            "type": "ImageChange",
+            "imageChange": {
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "${TAG}:test"
+              }
+            }
+          }
+        ],
+        "strategy": { 
+          "type": "Custom",
+          "customStrategy": {
+            "exposeDockerSocket": true,
+            "from": {
+              "kind": "DockerImage",
+              "name": "cccp-delivery"
+            },
+            "env": [
+              {
+                "name": "FROM",
+                "value": "${TAG}:rc"
+              },
+              {
+                "name": "TO",
+                "value": "${TAG}:latest"
+              },
+              {
+                "name": "TARGET_REGISTRY",
+                "value": "${TARGET_REGISTRY}"
+              }
+            ]
+          }
+        },
+        "output": { 
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "${TAG}:rc"
+          }
+        }
+      }
+    }
+  ]
+}
