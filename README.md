@@ -35,6 +35,8 @@ It covers points 2. and 3. from diagram - i.e. references an ADB Vagrantfile for
 
 To test Container Pipeline PoC, please follow the snippet below.
 
+First, you will need to clone this repo. This PoC uses [ADB OpenShift Vagrant](https://github.com/projectatomic/adb-atomic-developer-bundle/blob/master/components/centos/centos-openshift-setup/Vagrantfile) box and thus you'll need to download it and *up* the box.
+
 ```
 git clone https://github.com/vpavlin/cccp-demo-openshift
 cd cccp-demo-openshift
