@@ -12,17 +12,14 @@ I as an application developer want to build, test and deliver my containerized a
 
 My perception of the pipeline is that we want to provide a single input interface to the system (pipeline index) and don't limit ourselves in ways how to deliver the image (i.e. in case of Docker to push to any registry accessible from the pipeline infra). We obviously want to build an image provided by a user, we want to test it with a predefined set of tests and with tests provided by user, we want to deliver the image (i.e. push it to registry) and present logs in case of failures.
 
-[Diagram]
+![Container Pipeline Diagram](https://docs.google.com/drawings/d/1Izkwa7b7pAM_mpiL6M_qkqOMP_-bzmo1C-IE1fZDGY4/pub?w=960&h=720)
 
 1. Input Interface
     * A web UI/cli which allows user to provide at lease name of the project and repo URL. 
 2. OpenShift
-    1. Build
-        * Can be Atomic Reactor, result: image tagged as :test pushed
-    2. Test
-        * Can be a script connecting to Jenkins, result: image tagged as :rc pushed
-    3. Delivery
-        * A simple script to re-tag image to it's final name, result: image tagged as :latest or :vX.Y.Z pushed
+    * **Build** - Can be Atomic Reactor, result: image tagged as :test pushed
+    * **Test** - Can be a script connecting to Jenkins, result: image tagged as :rc pushed
+    * **Delivery** - A simple script to re-tag image to it's final name, result: image tagged as :latest or :vX.Y.Z pushed
 3. Registry
     * Pulp or a registry provided by OpenShift, needs further investigation
 4. Failure UI
@@ -41,7 +38,7 @@ To test Container Pipeline PoC, please follow the snippet below.
 ```
 git clone https://github.com/vpavlin/cccp-demo-openshift
 cd cccp-demo-openshift
-curl -O https://github.com/projectatomic/adb-atomic-developer-bundle/blob/master/components/centos/centos-openshift-setup/Vagrantfile
+curl -O https://raw.githubusercontent.com/projectatomic/adb-atomic-developer-bundle/master/components/centos/centos-openshift-setup/Vagrantfile
 sudo vagrant up
 ```
 
@@ -53,7 +50,12 @@ sudo vagrant ssh
 /vagrant/new-project.sh cccp-demo demo-proj https://github.com/vpavlin/cccp-demo-proj
 ```
 
-If all goes well, the last command will print a URL where you can see builds progress and review logs.
+If all goes well, the last command will print a URL where you can see builds progress and review logs. Login information:
+
+```
+Login: test-admin
+Password: anything:)
+```
 
 Script `build.sh` creates images which are then used by OpenShift to fulfill individual steps of the workflow defined by `template.json`. Script `new-project.sh` represents an Input Interface to the system and accepts name of the project, name of the image which represents the output of pipeline and source repository URL (this URL has to contain Dockerfile).
 
@@ -65,5 +67,48 @@ new-project.sh NAME REPO_URL
    REPO_URL  URL of project repository containing Dockerfile
 ```
 
+In case you want to start over, you need to remove the created project first and re-run `new-project.sh` (or just change the `NAME` parameter).
+
+```
+oc delete project cccp-demo
+/vagrant/new-project.sh cccp-demo demo-proj https://github.com/vpavlin/cccp-demo-proj
+
+```
+
 ### Template Objects
 
+The template consists of OpenShift objects. The following paragraphs will describe each of them.
+
+#### Parameters
+
+This object represents a list of parameters which can be used to modify the behaviour of the steps described below.
+
+* `SOURCE_REPOSITORY_URL` - The URL of the repository with your application source code
+* `BUILD_TRIGGER_SECRET` - A secret to be used to trigger a build via Origin API (This is not used now, as OpenShift instance in Vagrant box does not support generic triggers)
+* `TARGET_REGISTRY` - An URL of a registry where to push the final image
+* `TARGET_NAMESPACE` - A namespace in the target registry where to push the final image
+* `TAG` - Tag for the resulting image
+* `REPO_BUILD_PATH` - Path to a directory containing a Dockerfile
+* `REPO_TEST_PATH` - Path to tests in a repository (not used)
+
+#### ImageStream
+
+This object represents a connection between the steps of the workflow. Everytime a change happens to an image referenced by `${TAG}`, some action is trigged
+
+#### Build - BuildConfig
+
+BuildConfig named **Build** represents first step of the workflow - image build. You can review what happens in this step in [`run.sh`](run.sh) file. 
+
+It simply clones a given repository and runs a Docker build in a given directory. The result is pushed as `${TAG}:test` which triggers **Test** step through ImageStream.
+
+#### Test - BuildConfig
+
+BuildConfig named **Test** represents second step of the workflow - image test. You can review what happens in this step in [`run-test.sh`](run-test.sh) file.
+
+There is no interaction with CI (Jenkins). All it does is that it prints some messages and re-tags and pushes the image `${TAG}:rc` as if tests passed. The push triggers **Delivery** step through ImageStream
+
+#### Delivery - BuildConfig
+
+BuildConfig named **Delivery** represents second step of the workflow - image delivery. You can review what happens in this step in [`run-delivery.sh`](run-delivery.sh) file.
+
+The only task of this step is to pull the `${TAG}:rc` image, tag it as `${TAG}:latest` and push to `${TARGET_REGISTRY}`. This step is not fully functional as in real world, it would have to authenticate itself against the target registry (which it does not)
