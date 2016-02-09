@@ -1,16 +1,31 @@
 #!/usr/bin/bash
 
+function _() {
+    echo "==> $@"
+}
 
-echo "[FAKE] Talking to Jenkins"
-echo "[FAKE] Jenkins running..."
-echo "[FAKE] Jenkins returned: PASS"
+_ "[FAKE] Talking to Jenkins: Please, test the repository ${SOURCE_REPOSITORY_URL}, tests are located in ${REPO_TEST_PATH}"
+_ "[FAKE] Jenkins running..."
+_ "[FAKE] Jenkins returned: PASS"
 
-FULL_FROM=${DOCKER_REGISTRY_SERVICE_HOST}:${DOCKER_REGISTRY_SERVICE_PORT}/${FROM}
-FULL_TO=${DOCKER_REGISTRY_SERVICE_HOST}:${DOCKER_REGISTRY_SERVICE_PORT}/${TO}
+if [[ -d /var/run/secrets/openshift.io/push ]] && [[ ! -e /root/.dockercfg ]]; then
+  cp /var/run/secrets/openshift.io/push/.dockercfg /root/.dockercfg
+fi
 
-echo "Pulling tested image (${FROM})"
+FULL_FROM=${OUTPUT_REGISTRY}/`python -c 'import json, os; print json.loads(os.environ["BUILD"])["metadata"]["namespace"]'`/${FROM}
+FULL_TO=`python -c 'import json, os; print json.loads(os.environ["BUILD"])["spec"]["output"]["to"]["name"]'`
+
+_ "Pulling tested image (${FULL_FROM})"
 docker pull ${FULL_FROM}
-echo "Re-tagging tested image (${FROM} -> ${TO})"
+_ "Re-tagging tested image (${FULL_FROM} -> ${TO})"
 docker tag ${FULL_FROM} ${FULL_TO}
-echo "Pushing RC image (${FULL_TO})"
-docker push ${FULL_TO}
+
+_ "Pushing the image to registry (${FULL_TO})"
+
+
+if [ -n "${FULL_TO}" ] || [ -s "/root/.dockercfg" ]; then
+  docker push "${FULL_TO}"
+fi
+
+_ "Cleaning environment"
+docker rmi ${FULL_FROM} ${FULL_TO}

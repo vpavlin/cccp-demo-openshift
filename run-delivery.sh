@@ -1,12 +1,22 @@
 #!/usr/bin/bash
 
+function _() {
+    echo "==> $@"
+}
 
-FULL_FROM=${DOCKER_REGISTRY_SERVICE_HOST}:${DOCKER_REGISTRY_SERVICE_PORT}/${FROM}
-FULL_TO=${TARGET_REGISTRY}/${TO}
+if [[ -d /var/run/secrets/openshift.io/push ]] && [[ ! -e /root/.dockercfg ]]; then
+  cp /var/run/secrets/openshift.io/push/.dockercfg /root/.dockercfg
+fi
 
-echo "Pulling RC image (${FROM})"
+FULL_FROM=${OUTPUT_REGISTRY}/`python -c 'import json, os; print json.loads(os.environ["BUILD"])["metadata"]["namespace"]'`/${FROM}
+FULL_TO=${TARGET_REGISTRY}/${TARGET_NAMESPACE}/${TO}
+
+_ "Pulling RC image (${FROM})"
 docker pull ${FULL_FROM}
 docker tag ${FULL_FROM} ${FULL_TO}
 
-echo "Pushing final image (${FULL_TO})
+_ "Pushing final image (${FULL_TO})"
 docker push ${FULL_TO}
+
+_ "Cleaning environment"
+docker rmi ${FULL_FROM} ${FULL_TO}

@@ -1,7 +1,7 @@
 FROM centos
 
-RUN yum -y install centos
+RUN yum -y install docker
 
 ADD run-delivery.sh /usr/bin/
 
-RUN run-delivery.sh
+CMD run-delivery.sh

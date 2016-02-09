@@ -7,6 +7,9 @@
       "description": "Container Pipeline PoC Template"
     }
   },
+  "labels": {
+    "template": "cccp-demo"
+  },
   "parameters": [
     {
       "name": "SOURCE_REPOSITORY_URL",
@@ -25,25 +28,45 @@
       "value": "172.30.201.54:5000"
     },
     {
+      "name": "TARGET_NAMESPACE",
+      "description": "A namespace in the target registry where to push the final image",
+      "value": "cccp"
+    },
+    {
       "name": "TAG",
       "description": "Tag for the resulting image",
       "value": "cccp-demo",
       "required": true
     },
     {
-      "name": "REPO_PATH",
+      "name": "REPO_BUILD_PATH",
       "description": "Buildroot path in a repository",
       "value": "/",
       "required": true
+    },
+    {
+      "name": "REPO_TEST_PATH",
+      "description": "Path to tests in a repository",
+      "value": "/tests",
+      "required": true
     }
-
   ],
   "objects": [
+    {
+      "kind": "ImageStream",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${TAG}",
+        "annotations": {
+          "description": "Keeps track of changes in the image ${TAG}"
+        }
+      }
+    },
     {
       "kind": "BuildConfig",
       "apiVersion": "v1",
       "metadata": {
-          "name": "cccp-build" 
+          "name": "build" 
       },
       "spec": {
         "triggers": [ 
@@ -78,8 +101,8 @@
                 "value": "${SOURCE_REPOSITORY_URL}"
               },
               {
-                "name": "REPO_PATH",
-                "value": "${REPO_PATH}"
+                "name": "REPO_BUILD_PATH",
+                "value": "${REPO_BUILD_PATH}"
               }
             ]
           }
@@ -96,7 +119,7 @@
       "kind": "BuildConfig",
       "apiVersion": "v1",
       "metadata": {
-          "name": "cccp-test" 
+          "name": "test" 
       },
       "spec": {
         "triggers": [ 
@@ -132,7 +155,16 @@
               {
                 "name": "TO",
                 "value": "${TAG}:rc"
+              },
+              {
+                "name": "REPO_TEST_PATH",
+                "value": "${REPO_TEST_PATH}"
+              },
+              {
+                "name": "SOURCE_REPOSITORY_URL",
+                "value": "${SOURCE_REPOSITORY_URL}"
               }
+
             ]
           }
         },
@@ -148,7 +180,7 @@
       "kind": "BuildConfig",
       "apiVersion": "v1",
       "metadata": {
-          "name": "cccp-delivery" 
+          "name": "delivery" 
       },
       "spec": {
         "triggers": [ 
@@ -163,7 +195,7 @@
             "imageChange": {
               "from": {
                 "kind": "ImageStreamTag",
-                "name": "${TAG}:test"
+                "name": "${TAG}:rc"
               }
             }
           }
@@ -188,6 +220,10 @@
               {
                 "name": "TARGET_REGISTRY",
                 "value": "${TARGET_REGISTRY}"
+              },
+              {
+                "name": "TARGET_NAMESPACE",
+                "value": "${TARGET_NAMESPACE}"
               }
             ]
           }
