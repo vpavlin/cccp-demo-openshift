@@ -8,6 +8,10 @@ if [[ -d /var/run/secrets/openshift.io/push ]] && [[ ! -e /root/.dockercfg ]]; t
   cp /var/run/secrets/openshift.io/push/.dockercfg /root/.dockercfg
 fi
 
+if [ "${TARGET_REGISTRY}" == "" ];then
+    TARGET_REGISTRY=${OUTPUT_REGISTRY}
+fi
+
 FULL_FROM=${OUTPUT_REGISTRY}/`python -c 'import json, os; print json.loads(os.environ["BUILD"])["metadata"]["namespace"]'`/${FROM}
 FULL_TO=${TARGET_REGISTRY}/${TARGET_NAMESPACE}/${TO}
 

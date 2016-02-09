@@ -25,7 +25,7 @@
 	{
       "name": "TARGET_REGISTRY",
       "description": "An URL of a registry where to push the final image",
-      "value": "172.30.201.54:5000"
+      "value": ""
     },
     {
       "name": "TARGET_NAMESPACE",
