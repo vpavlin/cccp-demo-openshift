@@ -20,9 +20,11 @@ My perception of the pipeline is that we want to provide a single input interfac
     * **Build** - Can be Atomic Reactor, result: image tagged as :test pushed
     * **Test** - Can be a script connecting to Jenkins, result: image tagged as :rc pushed
     * **Delivery** - A simple script to re-tag image to it's final name, result: image tagged as :latest or :vX.Y.Z pushed
-3. Registry
+3. Jenkins/CI
+    * Infra where **Test** step in OpenShift connects to
+4. Registry
     * Pulp or a registry provided by OpenShift, needs further investigation
-4. Failure UI
+5. (1.) Failure UI
     * Probably part of Input Interface, presenting logs from failed builds
 
 ## Proof of Concept

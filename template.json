@@ -40,7 +40,7 @@
     },
     {
       "name": "REPO_BUILD_PATH",
-      "description": "Buildroot path in a repository",
+      "description": "Path to a directory containing a Dockerfile",
       "value": "/",
       "required": true
     },
