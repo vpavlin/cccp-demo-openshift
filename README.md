@@ -39,27 +39,44 @@ To test Container Pipeline PoC, please follow the snippet below.
 
 First, you will need to clone this repo. This PoC uses [ADB OpenShift Vagrant](https://github.com/projectatomic/adb-atomic-developer-bundle/blob/master/components/centos/centos-openshift-setup/Vagrantfile) box and thus you'll need to download it and *up* the box.
 
+Make sure you have either don't have `projectatomic/adb` box on your machine, or you have the latest version (v1.7.0)
+
+```
+$ sudo vagrant box list
+projectatomic/adb    (libvirt, 1.7.0)
+```
+
+Now to the demo itself...
+
 ```
 git clone https://github.com/vpavlin/cccp-demo-openshift
 cd cccp-demo-openshift
 curl -O https://raw.githubusercontent.com/projectatomic/adb-atomic-developer-bundle/master/components/centos/centos-openshift-setup/Vagrantfile
 sudo vagrant up
+sudo vagrant ssh
+```
+
+There is potentially a bug in ADB 1.7.0 (at least for me - https://github.com/projectatomic/adb-atomic-developer-bundle/issues/243). If you hit it, you'll need to do:
+
+```
+sudo chmod +x /usr/bin/oadm
+sudo systemctl restart openshift
 ```
 
 You might want to see if OpenShift started successfully now by checking https://10.1.2.2:8443/console/
 
+As the Vagrant box suggests, the login information you'll need for `oc login` command below are
+
+* **Login:** admin
+* **Password:** admin
+
 ```
-sudo vagrant ssh
+oc login localhost:8443 -u admin -p admin --insecure-skip-tls-verify
 /vagrant/build.sh
 /vagrant/new-project.sh cccp-demo demo-proj https://github.com/vpavlin/cccp-demo-proj
 ```
 
-If all goes well, the last command will print a URL where you can see builds progress and review logs. Login information:
-
-```
-Login: test-admin
-Password: anything:)
-```
+If all goes well, the last command will print a URL where you can see builds progress and review logs (using the login information above).
 
 Script `build.sh` creates images which are then used by OpenShift to fulfill individual steps of the workflow defined by `template.json`. Script `new-project.sh` represents an Input Interface to the system and accepts name of the project, name of the image which represents the output of pipeline and source repository URL (this URL has to contain Dockerfile).
 
